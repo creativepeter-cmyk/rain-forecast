@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rain Forecast Setup",
+        "data": {
+          "api_key": "Visual Crossing API Key",
+          "address": "Location (City, State, Country)",
+          "polling_interval": "Polls per day"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth_or_location": "Invalid API Key or Location Address"
+    }
+  }
+}
