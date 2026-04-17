@@ -30,7 +30,7 @@ class RainForecastSensor(SensorEntity):
 
     @property
     def unique_id(self):
-        return f"rain_forecast_{self.days}_days_v3"
+        return f"rain_forecast_{self.days}_days_v4" # Bumped version for unique ID
 
     @property
     def state(self):
@@ -61,25 +61,35 @@ class RainForecastSensor(SensorEntity):
             
             if start_search <= d_date <= end_search:
                 raw_mm = float(day.get("precip", 0) or 0)
-                prob = int(float(day.get("precipprob", 0) or 0))
+                prob = float(day.get("precipprob", 0) or 0)
+                cover = float(day.get("precipcover", 0) or 0) # Added coverage support
                 
-                # Weighting: Actual Volume * Probability Percentage
-                weighted_val = raw_mm * (prob / 100)
+                # --- NEW WCI FORMULA ---
+                # Weighting: (70% Probability + 30% Coverage) / 100
+                # If d_date is in the past, coverage/probability might be actuals.
+                # If in the future, it provides the weighted "threat level" you wanted.
+                weighted_pct = (prob * 0.7) + (cover * 0.3)
+                weighted_val = raw_mm * (weighted_pct / 100)
+                
                 total_mm += weighted_val
                 
-                # Format: "MON 29/03"
-                display_day = d_date.strftime("%d/%m").upper()
+                # Format: "17/04"
+                display_day = d_date.strftime("%d/%m")
 
                 daily_breakdown.append({
                     "day": display_day,
                     "mm": round(weighted_val, 1),
-                    "prob": prob
+                    "prob": int(weighted_pct) # Now returns the combined confidence score
                 })
+
+        # Dynamically pull location from API data; falls back to "Unknown" if not found
+        location_label = self.coordinator.data.get("resolvedAddress", "Unknown Location")
 
         return {
             "total_period_mm": round(total_mm, 1),
             "start_date": str(start_search),
             "end_date": str(end_search),
             "daily_data": daily_breakdown,
-            "location": self.coordinator.data.get("resolvedAddress", "Sunbury, VIC")
+            "location": location_label,
+            "formula": "WCI (0.7P + 0.3C)"
         }
